@@ -1,0 +1,480 @@
+openapi: 3.1.0
+info:
+  title: Api
+  version: 0.1.0
+  description: MCAT Study Tool API
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: cards
+    description: Flashcard operations
+  - name: sections
+    description: MCAT section operations
+  - name: sessions
+    description: Study session operations
+  - name: progress
+    description: Progress and streak tracking
+
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /sections:
+    get:
+      operationId: listSections
+      tags: [sections]
+      summary: List all MCAT sections
+      responses:
+        "200":
+          description: List of MCAT sections
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Section"
+
+  /cards:
+    get:
+      operationId: listCards
+      tags: [cards]
+      summary: List flashcards with optional filters
+      parameters:
+        - name: sectionId
+          in: query
+          schema:
+            type: integer
+        - name: difficulty
+          in: query
+          schema:
+            type: string
+            enum: [easy, medium, hard]
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [new, learning, mastered]
+      responses:
+        "200":
+          description: List of cards
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Card"
+    post:
+      operationId: createCard
+      tags: [cards]
+      summary: Create a new flashcard
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCardBody"
+      responses:
+        "201":
+          description: Created card
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Card"
+
+  /cards/{id}:
+    get:
+      operationId: getCard
+      tags: [cards]
+      summary: Get a single flashcard
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Card details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Card"
+    put:
+      operationId: updateCard
+      tags: [cards]
+      summary: Update a flashcard
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateCardBody"
+      responses:
+        "200":
+          description: Updated card
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Card"
+    delete:
+      operationId: deleteCard
+      tags: [cards]
+      summary: Delete a flashcard
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /cards/{id}/review:
+    post:
+      operationId: reviewCard
+      tags: [cards]
+      summary: Mark a card as reviewed (known or unknown)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReviewCardBody"
+      responses:
+        "200":
+          description: Updated card after review
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Card"
+
+  /sessions:
+    get:
+      operationId: listSessions
+      tags: [sessions]
+      summary: List study sessions
+      responses:
+        "200":
+          description: List of sessions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Session"
+    post:
+      operationId: createSession
+      tags: [sessions]
+      summary: Start a study session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSessionBody"
+      responses:
+        "201":
+          description: Created session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Session"
+
+  /sessions/{id}:
+    put:
+      operationId: updateSession
+      tags: [sessions]
+      summary: End or update a study session
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateSessionBody"
+      responses:
+        "200":
+          description: Updated session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Session"
+
+  /progress:
+    get:
+      operationId: getProgress
+      tags: [progress]
+      summary: Get overall study progress summary
+      responses:
+        "200":
+          description: Progress summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProgressSummary"
+
+  /progress/streak:
+    get:
+      operationId: getStreak
+      tags: [progress]
+      summary: Get current study streak and recent activity
+      responses:
+        "200":
+          description: Streak data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StreakData"
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required: [status]
+
+    Section:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        shortName:
+          type: string
+        color:
+          type: string
+        description:
+          type: string
+        totalCards:
+          type: integer
+        masteredCards:
+          type: integer
+      required: [id, name, shortName, color, description, totalCards, masteredCards]
+
+    Card:
+      type: object
+      properties:
+        id:
+          type: integer
+        sectionId:
+          type: integer
+        sectionName:
+          type: string
+        front:
+          type: string
+        back:
+          type: string
+        difficulty:
+          type: string
+          enum: [easy, medium, hard]
+        status:
+          type: string
+          enum: [new, learning, mastered]
+        hasVisualAid:
+          type: boolean
+        visualAidType:
+          type: string
+          nullable: true
+          enum: [steps, diagram, analogy, formula, null]
+        visualAidContent:
+          type: string
+          nullable: true
+        reviewCount:
+          type: integer
+        correctCount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        lastReviewedAt:
+          type: string
+          format: date-time
+          nullable: true
+      required: [id, sectionId, sectionName, front, back, difficulty, status, hasVisualAid, visualAidType, visualAidContent, reviewCount, correctCount, createdAt, lastReviewedAt]
+
+    CreateCardBody:
+      type: object
+      properties:
+        sectionId:
+          type: integer
+        front:
+          type: string
+        back:
+          type: string
+        difficulty:
+          type: string
+          enum: [easy, medium, hard]
+        hasVisualAid:
+          type: boolean
+        visualAidType:
+          type: string
+          nullable: true
+          enum: [steps, diagram, analogy, formula, null]
+        visualAidContent:
+          type: string
+          nullable: true
+      required: [sectionId, front, back, difficulty]
+
+    UpdateCardBody:
+      type: object
+      properties:
+        front:
+          type: string
+        back:
+          type: string
+        difficulty:
+          type: string
+          enum: [easy, medium, hard]
+        hasVisualAid:
+          type: boolean
+        visualAidType:
+          type: string
+          nullable: true
+        visualAidContent:
+          type: string
+          nullable: true
+
+    ReviewCardBody:
+      type: object
+      properties:
+        known:
+          type: boolean
+      required: [known]
+
+    Session:
+      type: object
+      properties:
+        id:
+          type: integer
+        sectionId:
+          type: integer
+          nullable: true
+        sectionName:
+          type: string
+          nullable: true
+        startedAt:
+          type: string
+          format: date-time
+        endedAt:
+          type: string
+          format: date-time
+          nullable: true
+        durationMinutes:
+          type: integer
+          nullable: true
+        cardsReviewed:
+          type: integer
+        cardsCorrect:
+          type: integer
+      required: [id, sectionId, sectionName, startedAt, endedAt, durationMinutes, cardsReviewed, cardsCorrect]
+
+    CreateSessionBody:
+      type: object
+      properties:
+        sectionId:
+          type: integer
+          nullable: true
+      required: []
+
+    UpdateSessionBody:
+      type: object
+      properties:
+        endedAt:
+          type: string
+          format: date-time
+        cardsReviewed:
+          type: integer
+        cardsCorrect:
+          type: integer
+
+    ProgressSummary:
+      type: object
+      properties:
+        totalCards:
+          type: integer
+        masteredCards:
+          type: integer
+        learningCards:
+          type: integer
+        newCards:
+          type: integer
+        totalSessionsToday:
+          type: integer
+        totalMinutesToday:
+          type: integer
+        weeklyMinutes:
+          type: array
+          items:
+            type: integer
+        sectionBreakdown:
+          type: array
+          items:
+            $ref: "#/components/schemas/SectionProgress"
+      required: [totalCards, masteredCards, learningCards, newCards, totalSessionsToday, totalMinutesToday, weeklyMinutes, sectionBreakdown]
+
+    SectionProgress:
+      type: object
+      properties:
+        sectionId:
+          type: integer
+        sectionName:
+          type: string
+        color:
+          type: string
+        totalCards:
+          type: integer
+        masteredCards:
+          type: integer
+        percentage:
+          type: number
+      required: [sectionId, sectionName, color, totalCards, masteredCards, percentage]
+
+    StreakData:
+      type: object
+      properties:
+        currentStreak:
+          type: integer
+        longestStreak:
+          type: integer
+        lastStudiedDate:
+          type: string
+          nullable: true
+        studiedDates:
+          type: array
+          items:
+            type: string
+      required: [currentStreak, longestStreak, lastStudiedDate, studiedDates]
